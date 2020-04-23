@@ -1,0 +1,1 @@
+not be resent. The fallowing are small examples on how this programs can be used. These commands are executed on the UNIX machin
