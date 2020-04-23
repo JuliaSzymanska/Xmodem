@@ -54,6 +54,7 @@ def main():
     nrPakietu = 1
     calkowityBlok = b''
     while 1:
+        print("Odbiornik: Pakiet nr", nrPakietu)
         print(odebranyBlok)
 
         # Sprawdzenie czy nie był to ostatni wyslany blok
@@ -69,7 +70,6 @@ def main():
             print("Odbiornik: Pakiet odebrano niepoprawnie. Niepoprawny numer pakeitu. Ponawiam transmisje. ")
             serialPort.write(ZbioroweDane.NAK)
             continue
-        print("Odbiornik: Pakiet nr", nrPakietu, ": ", odebranyBlok[2:-1])
 
         # Odczytanie i obliczenie sumy kontrolnej oraz sprawdzenie rownosci sum kontrolnych
         sumaKontrolnaWyliczona = 0
@@ -86,7 +86,7 @@ def main():
             print("Odbiornik: Pakiet odebrano niepoprawnie. Niepoprawna suma kontrolna. Ponawiam transmisje. ")
             serialPort.write(ZbioroweDane.NAK)
             continue
-        print("Odbiornik: Pakiet nr", nrPakietu, "odebrano poprawnie. ")
+        print("Odbiornik: Pakiet nr", nrPakietu, "odebrano poprawnie. ", '\n')
         nrPakietu += 1
         dopelnienie = bytearray(odebranyBlok)
         for i in range(len(dopelnienie)):
