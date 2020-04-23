@@ -5,6 +5,7 @@ import crc16
 
 
 def main():
+
     # Pobieranie numeru portu do otwarcia
     port = 'false'
     while port == 'false':
@@ -16,7 +17,7 @@ def main():
     # Otwieranie portu
     print("Odbiornik: Otwieranie portu:", port)
     try:
-        serialPort = serial.Serial(port, 9600 * 2, 8, serial.PARITY_NONE, serial.STOPBITS_ONE, 15)
+        serialPort = serial.Serial(port, 9600, 8, serial.PARITY_NONE, serial.STOPBITS_ONE, 15)
         print("Odbiornik: Port zostal otwarty. Oczekiwanie na transmisje....")
     except:
         print("Odbiornik: Nie udało sie otworzyc portu")
@@ -24,7 +25,7 @@ def main():
 
     # Pytanie czy jest zgoda na transmisje
     while 1:
-        zgoda = input("Odbiornik: zgoda na transmisje?\n1. Tak - Algebraiczna\n2. Tak - CRC\n3. Nie\n")
+        zgoda = input("Odbiornik: Zgoda na transmisje?\n1. Tak - Algebraiczna\n2. Tak - CRC\n3. Nie\n")
         if zgoda == "1":
             decyzja = ZbioroweDane.NAK
             break
@@ -98,6 +99,7 @@ def main():
                     del dopelnienie[i:-2]
                     odebranyBlok = bytes(dopelnienie)
                     break
+
         if decyzja == ZbioroweDane.NAK:
             calkowityBlok += odebranyBlok[3:-1]
         elif decyzja == ZbioroweDane.CRC:
@@ -111,7 +113,7 @@ def main():
             odebranyBlok = serialPort.read(133)
 
     # Zapis do pliku calego odebranego pliku
-    file = open("Odbierana.txt", 'wb+')
+    file = open("Odebrana.txt", 'wb+')
     file.write(calkowityBlok)
     file.close()
 
