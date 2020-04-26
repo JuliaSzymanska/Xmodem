@@ -6,6 +6,7 @@ from tkinter.ttk import *
 import Zmienne
 
 
+# ------------------------------------------------------- Otwieranie portow i nawiazywanie polaczenia -----------------------------------------------------
 def dalej():
     Zmienne.port = str(combo.get())
     button.destroy()
@@ -15,6 +16,8 @@ def dalej():
                        text="Nadajnik: Otwieranie portu: " + Zmienne.port,
                        font=("Arial Bold", 10))
     portLabelx.grid(column=0, row=0)
+
+    # Otwieranie wybranego portu
     try:
         Zmienne.serialPort = serial.Serial(Zmienne.port, 9600, 8, serial.PARITY_NONE, serial.STOPBITS_ONE, 15)
         portLabel2 = Label(Zmienne.window,
@@ -28,6 +31,7 @@ def dalej():
         portLabel2.grid(column=0, row=1)
         return
 
+    # Rozpoczecie transmisji
     Zmienne.odpowiedz = Zmienne.serialPort.read()
     if Zmienne.odpowiedz == ZbioroweDane.CRC or Zmienne.odpowiedz == ZbioroweDane.NAK:
         portLabel3 = Label(Zmienne.window,
@@ -47,14 +51,17 @@ def dalej():
         Zmienne.window.after(100, wysylanieBloku)
 
 
+# ------------------------------------------------------------- Odbieranie blokow ---------------------------------------------------------------------
 def wysylanieBloku():
+    # Wysylanie naglowka SOH
     Zmienne.serialPort.write(ZbioroweDane.SOH)
-    pakiet = bytearray(Zmienne.nrBloku.to_bytes(1, 'big'))
-    pakiet.append(255 - Zmienne.nrBloku)
 
     # Wysyłanie numeru bloku, dopełnienie numeru bloku do 255
+    pakiet = bytearray(Zmienne.nrBloku.to_bytes(1, 'big'))
+    pakiet.append(255 - Zmienne.nrBloku)
     Zmienne.serialPort.write(bytes(pakiet))
 
+    # Jesli jest to pakiet mniejszy niz 128 bajtow, zostaje dopelniony do tej liczby
     if Zmienne.nrWyslanegoBloku + 1 == len(Zmienne.blok):
         dopel = bytearray(Zmienne.blok[Zmienne.nrWyslanegoBloku])
         while len(dopel) < 128:
@@ -100,8 +107,9 @@ def wysylanieBloku():
         elif odpowiedzOdbierana == ZbioroweDane.CAN:
             portLabel5["text"] = "Nadajnik: Polaczenie zostalo przerwane. "
             sys.exit()
+
+    # Po wysłaniu wszystkich bloków, wysyłanie EOT
     if Zmienne.nrBloku - 1 == len(Zmienne.blok):
-        # Po wysłaniu wszystkich bloków, wysyłanie EOT
         portLabel6 = Label(Zmienne.window,
                            text="Nadajnik: Zakonczono wysylanie ostatniego pakietu",
                            font=("Arial Bold", 10))
@@ -111,6 +119,7 @@ def wysylanieBloku():
                            font=("Arial Bold", 10))
         portLabel7.grid(column=0, row=6)
 
+        # Wysylanie EOT
         while 1:
             Zmienne.serialPort.write(ZbioroweDane.EOT)
             Zmienne.odpowiedz = Zmienne.serialPort.read()
@@ -126,9 +135,13 @@ def wysylanieBloku():
                            text="Nadajnik: Transfer zostal zakonczony. ",
                            font=("Arial Bold", 10))
         portLabel8.grid(column=0, row=7)
+
+    # Wysylanie kolejnego bloku
     if Zmienne.nrBloku - 1 < len(Zmienne.blok):
         Zmienne.window.after(100, wysylanieBloku)
 
+
+# ---------------------------------------------------------------- Poczatek programu -----------------------------------------------------------------
 
 # Otwieranie pliku do wyslania i pobranie tekstu
 file = open("Wysylana.txt", 'rb')
@@ -141,6 +154,8 @@ file.close()
 Zmienne.window.title("Wysylanie")
 Zmienne.window.geometry('400x200')
 Zmienne.window.grid_columnconfigure(1, weight=5)
+
+# Pobieranie portu do otwarcia
 portLabel = Label(Zmienne.window,
                   text="Nadajnik: Wybierz numer portu szeregowego:",
                   font=("Arial Bold", 10))
