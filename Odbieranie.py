@@ -1,5 +1,4 @@
 import serial
-import sys
 import ZbioroweDane
 import crc16
 import ZmienOdbieranie
@@ -7,6 +6,7 @@ from tkinter import *
 from tkinter.ttk import *
 
 
+# ------------------------------------------------------- Otwieranie portow i nawiazywanie polaczenia -------------------------------------------------------
 def dalej():
     ZmienOdbieranie.port = str(combo.get())
     button.destroy()
@@ -18,6 +18,8 @@ def dalej():
                        text="Odbiornik: Otwieranie portu: " + ZmienOdbieranie.port,
                        font=("Arial Bold", 10))
     portLabelx.grid(column=0, row=0)
+
+    # Otwieranie wybranego portu
     try:
         ZmienOdbieranie.serialPort = serial.Serial(ZmienOdbieranie.port, 9600, 8, serial.PARITY_NONE,
                                                    serial.STOPBITS_ONE, 15)
@@ -31,8 +33,8 @@ def dalej():
                            font=("Arial Bold", 10))
         portLabel2.grid(column=0, row=1)
         return
-    # Inicjowanie polaczenia, odbieranie wysłanego bloku
 
+    # Inicjowanie polaczenia, odbieranie wysłanego bloku
     ZmienOdbieranie.serialPort.timeout = 10
     for i in range(6):
         ZmienOdbieranie.serialPort.write(ZmienOdbieranie.decyzja)
@@ -42,14 +44,16 @@ def dalej():
             ZmienOdbieranie.odebranyBlok = ZmienOdbieranie.serialPort.read(133)
         if ZmienOdbieranie.odebranyBlok != b'':
             break
-    print(len(ZmienOdbieranie.odebranyBlok))
     if ZmienOdbieranie.odebranyBlok == b'':
         print("Odbiornik: Brak odpowiedzi. ")
         sys.exit()
+
+    # Odczytywanie odebranego bloku, odbieranie kolejnych blokow
     if not ZmienOdbieranie.flag:
         ZmienOdbieranie.window.after(100, odbieranieBloku)
 
 
+# ------------------------------------------------------------- Odbieranie blokow ---------------------------------------------------------------------
 def odbieranieBloku():
     portLabel3 = Label(ZmienOdbieranie.window,
                        text="Odbiornik: Odbieram pakiet nr." + str(ZmienOdbieranie.nrPakietu),
@@ -68,6 +72,7 @@ def odbieranieBloku():
                            font=("Arial Bold", 10))
         portLabel7.grid(column=0, row=5)
         ZmienOdbieranie.serialPort.write(ZbioroweDane.ACK)
+
         # Zapis do pliku calego odebranego pliku
         file = open("Odebrana.txt", 'wb+')
         file.write(ZmienOdbieranie.calkowityBlok)
@@ -82,6 +87,7 @@ def odbieranieBloku():
         print("Odbiornik: Pakiet odebrano niepoprawnie. Niepoprawny numer pakietu. Ponawiam transmisje. ")
         ZmienOdbieranie.serialPort.write(ZbioroweDane.NAK)
         return
+
     # Odczytanie i obliczenie sumy kontrolnej oraz sprawdzenie rownosci sum kontrolnych
     sumaKontrolnaWyliczona = 0
     sumaKontrolnaOdebrana = 0
@@ -104,6 +110,8 @@ def odbieranieBloku():
                        font=("Arial Bold", 10))
     portLabel6.grid(column=0, row=4)
     ZmienOdbieranie.nrPakietu += 1
+
+    # Usuniecie dopelnienia przy zapisywaniu odebranego pakietu
     dopelnienie = bytearray(ZmienOdbieranie.odebranyBlok)
     for i in range(len(dopelnienie)):
         if dopelnienie[i] == 26:
@@ -116,6 +124,7 @@ def odbieranieBloku():
                 ZmienOdbieranie.odebranyBlok = bytes(dopelnienie)
                 break
 
+    # Dodanie odebranego bloku z usunietym dopelnieniem do pozostalych odebranych blokow
     if ZmienOdbieranie.decyzja == ZbioroweDane.NAK:
         ZmienOdbieranie.calkowityBlok += ZmienOdbieranie.odebranyBlok[3:-1]
     elif ZmienOdbieranie.decyzja == ZbioroweDane.CRC:
@@ -131,6 +140,7 @@ def odbieranieBloku():
         ZmienOdbieranie.window.after(100, odbieranieBloku)
 
 
+# ---------------------------------------------------------------- Poczatek programu -----------------------------------------------------------------
 # Pobieranie numeru portu do otwarcia
 ZmienOdbieranie.window.title("Odbieranie")
 ZmienOdbieranie.window.geometry('1000x200')
