@@ -10,7 +10,11 @@ def dalej():
     Zmienne.port = str(combo.get())
     button.destroy()
     combo.destroy()
-    portLabel["text"] = "Nadajnik: Otwieranie portu: " + Zmienne.port
+    portLabel.destroy()
+    portLabelx = Label(Zmienne.window,
+                       text="Nadajnik: Otwieranie portu: " + Zmienne.port,
+                       font=("Arial Bold", 10))
+    portLabelx.grid(column=0, row=0)
     try:
         Zmienne.serialPort = serial.Serial(Zmienne.port, 9600, 8, serial.PARITY_NONE, serial.STOPBITS_ONE, 15)
         portLabel2 = Label(Zmienne.window,

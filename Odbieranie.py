@@ -15,19 +15,19 @@ def dalej():
     portLabel3.destroy()
     portLabel.destroy()
     portLabelx = Label(ZmienOdbieranie.window,
-                       text="Nadajnik: Otwieranie portu: " + ZmienOdbieranie.port,
+                       text="Odbiornik: Otwieranie portu: " + ZmienOdbieranie.port,
                        font=("Arial Bold", 10))
     portLabelx.grid(column=0, row=0)
     try:
         ZmienOdbieranie.serialPort = serial.Serial(ZmienOdbieranie.port, 9600, 8, serial.PARITY_NONE,
                                                    serial.STOPBITS_ONE, 15)
         portLabel2 = Label(ZmienOdbieranie.window,
-                           text="Nadajnik: Port zostal otwarty. Oczekiwanie na transmisje....",
+                           text="Odbiornik: Port zostal otwarty. Oczekiwanie na transmisje....",
                            font=("Arial Bold", 10))
         portLabel2.grid(column=0, row=1)
     except:
         portLabel2 = Label(ZmienOdbieranie.window,
-                           text="Nadajnik: Nie udało sie otworzyc portu",
+                           text="Odbiornik: Nie udało sie otworzyc portu",
                            font=("Arial Bold", 10))
         portLabel2.grid(column=0, row=1)
         return
@@ -60,10 +60,6 @@ def odbieranieBloku():
                        text=str(ZmienOdbieranie.odebranyBlok),
                        font=("Arial Bold", 10))
     portLabel4.grid(column=0, row=3)
-    # portLabel5 = Label(ZmienOdbieranie.window,
-    #                    text=str(ZmienOdbieranie.odebranyBlok[75:]),
-    #                    font=("Arial Bold", 10))
-    # portLabel5.grid(column=0, row=4)
 
     # Sprawdzenie czy nie był to ostatni wyslany blok
     if ZmienOdbieranie.odebranyBlok[0].to_bytes(1, 'big') == ZbioroweDane.EOT:
