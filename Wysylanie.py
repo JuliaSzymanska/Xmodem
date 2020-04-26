@@ -1,115 +1,148 @@
 import crc16
 import serial
-import sys
 import ZbioroweDane
+from tkinter import *
+from tkinter.ttk import *
+import Zmienne
 
-
-def main():
-    # Otwieranie pliku do wyslania i pobranie tekstu
-    file = open("Wysylana.txt", 'rb')
-    wiadomosc = file.read()
-
-    # Podzial tekstu na 128 bajtowe sekcje
-    blok = [wiadomosc[i:i + 128] for i in range(0, len(wiadomosc), 128)]
-    file.close()
-
-    # Pobieranie numeru portu do otwarcia
-    port = 'false'
-    while port == 'false':
-        port = input("Nadajnik: Wybierz numer portu szeregowego:\n1 - COM1\n2 - COM2\n3 - COM3\n4 - COM4\n5 - COM5\n")
-        port = ZbioroweDane.wyborPortu(port)
-        if port == 'false':
-            print("Nadajnik: Niepoprawny numer portu. ")
-
-    # Otwieranie portu
-    print("Nadajnik: Otwieranie portu:", port)
+def dalej():
+    Zmienne.port = str(combo.get())
+    button.destroy()
+    combo.destroy()
+    portLabel["text"] = "Nadajnik: Otwieranie portu: " + Zmienne.port
     try:
-        serialPort = serial.Serial(port, 9600, 8, serial.PARITY_NONE, serial.STOPBITS_ONE, 15)
-        print("Nadajnik: Port zostal otwarty. Oczekiwanie na transmisje....")
+        Zmienne.serialPort = serial.Serial(Zmienne.port, 9600, 8, serial.PARITY_NONE, serial.STOPBITS_ONE, 15)
+        portLabel2 = Label(Zmienne.window,
+                           text="Nadajnik: Port zostal otwarty. Oczekiwanie na transmisje....",
+                           font=("Arial Bold", 10))
+        portLabel2.grid(column=0, row=1)
     except:
-        print("Nadajnik: Nie udało sie otworzyc portu")
+        portLabel2 = Label(Zmienne.window,
+                           text="Nadajnik: Nie udało sie otworzyc portu",
+                           font=("Arial Bold", 10))
+        portLabel2.grid(column=0, row=1)
+
+    Zmienne.odpowiedz = Zmienne.serialPort.read()
+    if Zmienne.odpowiedz == ZbioroweDane.CRC or Zmienne.odpowiedz == ZbioroweDane.NAK:
+        portLabel3 = Label(Zmienne.window,
+                           text="Nadajnik: Zgoda na transmisje",
+                           font=("Arial Bold", 10))
+        portLabel3.grid(column=0, row=2)
+    else:
         sys.exit()
 
-    nrBloku = 1
-    nrWyslanegoBloku = 0
-
-    # Odczytywanie odpoweidzi odbiornika
-    while 1:
-        odpowiedz = serialPort.read()
-        if odpowiedz == ZbioroweDane.CRC or odpowiedz == ZbioroweDane.NAK:
-            print("Nadajnik: Zgoda na transmisje")
-            break
-        else:
-            sys.exit()
-
     # Wysylanie pakietu
-    print("Nadajnik: Wysylanie pakietu")
-    while nrWyslanegoBloku < len(blok):
-        if odpowiedz == ZbioroweDane.NAK or odpowiedz == ZbioroweDane.CRC:
-            serialPort.write(ZbioroweDane.SOH)
+    portLabel4 = Label(Zmienne.window,
+                       text="Nadajnik: Wysylanie pakietu",
+                       font=("Arial Bold", 10))
+    portLabel4.grid(column=0, row=3)
 
-        pakiet = bytearray(nrBloku.to_bytes(1, 'big'))
-        pakiet.append(255 - nrBloku)
+    if Zmienne.nrBloku - 1 < len(Zmienne.blok):
+        Zmienne.window.after(100, tele())
 
-        # Wysyłanie numeru bloku, dopełnienie numeru bloku do 255
-        serialPort.write(bytes(pakiet))
+def tele():
+    Zmienne.serialPort.write(ZbioroweDane.SOH)
+    pakiet = bytearray(Zmienne.nrBloku.to_bytes(1, 'big'))
+    pakiet.append(255 - Zmienne.nrBloku)
 
-        if nrWyslanegoBloku + 1 == len(blok):
-            dopel = bytearray(blok[nrWyslanegoBloku])
-            while len(dopel) < 128:
-                dopel.append(ZbioroweDane.SUB)
-            blok[nrWyslanegoBloku] = bytes(dopel)
+    # Wysyłanie numeru bloku, dopełnienie numeru bloku do 255
+    Zmienne.serialPort.write(bytes(pakiet))
 
-        # Wysyłanie bloku danych
-        for i in blok[nrWyslanegoBloku]:
-            serialPort.write(i.to_bytes(1, 'big'))
+    if Zmienne.nrWyslanegoBloku + 1 == len(Zmienne.blok):
+        dopel = bytearray(Zmienne.blok[Zmienne.nrWyslanegoBloku])
+        while len(dopel) < 128:
+            dopel.append(26)
+        Zmienne.blok[Zmienne.nrWyslanegoBloku] = bytes(dopel)
 
-        # Liczenie i wysyłanie sumy kontrolnej
-        sumaKontrolna = 0
-        if odpowiedz == ZbioroweDane.NAK:
-            for i in blok[nrWyslanegoBloku]:
-                sumaKontrolna += i
-            sumaKontrolna %= 256
-            sumaKontrolna = bytearray(sumaKontrolna.to_bytes(1, 'big'))
-        else:
-            sumaKontrolna = crc16.crc16xmodem(blok[nrWyslanegoBloku])
-            sumaKontrolna = bytearray(sumaKontrolna.to_bytes(2, 'big'))
-        serialPort.write(bytes(sumaKontrolna))
+    # Wysyłanie bloku danych
+    for i in Zmienne.blok[Zmienne.nrWyslanegoBloku]:
+        Zmienne.serialPort.write(i.to_bytes(1, 'big'))
 
-        # Sprawdzenie statusu przesłanego bloku
-        while 1:
-            odpowiedzOdbierania = serialPort.read()
-            if odpowiedzOdbierania == ZbioroweDane.ACK:
-                print("Nadajnik: Pakiet nr.", nrWyslanegoBloku + 1, "przeslany poprawnie. ")
-                nrWyslanegoBloku += 1
-                if nrBloku == 255:
-                    nrBloku = 1
-                else:
-                    nrBloku += 1
-                break
-            elif odpowiedzOdbierania == ZbioroweDane.NAK:
-                print("Nadajnik: Pakiet nr.", nrWyslanegoBloku + 1, "przeslany nie poprawnie. Ponawiam transmisje. ")
-                break
-            elif odpowiedzOdbierania == ZbioroweDane.CAN:
-                print("Nadajnik: Polaczenie zostalo przerwane. ")
-                sys.exit()
+    # Liczenie i wysyłanie sumy kontrolnej
+    sumaKontrolna = 0
+    if Zmienne.odpowiedz == ZbioroweDane.NAK:
+        for i in Zmienne.blok[Zmienne.nrWyslanegoBloku]:
+            sumaKontrolna += i
+        sumaKontrolna %= 256
+        sumaKontrolna = bytearray(sumaKontrolna.to_bytes(1, 'big'))
+    else:
+        sumaKontrolna = crc16.crc16xmodem(Zmienne.blok[Zmienne.nrWyslanegoBloku])
+        sumaKontrolna = bytearray(sumaKontrolna.to_bytes(2, 'big'))
+    Zmienne.serialPort.write(bytes(sumaKontrolna))
 
-    # Po wysłaniu wszystkich bloków, wysyłanie EOT
-    print("Nadajnik: Zakonczono wysylanie ostatniego pakietu")
+    # Sprawdzenie statusu przesłanego bloku
+    portLabel5 = Label(Zmienne.window,
+                       text="",
+                       font=("Arial Bold", 10))
+    portLabel5.grid(column=0, row=4)
     while 1:
-        serialPort.write(ZbioroweDane.EOT)
-        odpowiedz = serialPort.read()
-        if odpowiedz == ZbioroweDane.ACK:
-            print("Nadajnik: Otrzymano potwierdzenie na zakonczenie transmisji. ")
+        odpowiedzOdbierana = Zmienne.serialPort.read()
+        if odpowiedzOdbierana == ZbioroweDane.ACK:
+            portLabel5["text"] = "Nadajnik: Pakiet nr." + str(Zmienne.nrWyslanegoBloku + 1) + " przeslany poprawnie. "
+            Zmienne.nrWyslanegoBloku += 1
+            if Zmienne.nrBloku == 255:
+                Zmienne.nrBloku = 1
+            else:
+                Zmienne.nrBloku += 1
             break
-        if odpowiedz == ZbioroweDane.CAN:
-            print("Nadajnik: Polaczenie zostalo przerwane. ")
+        elif odpowiedzOdbierana == ZbioroweDane.NAK:
+            portLabel5[
+                "text"] = "Nadajnik: Pakiet nr." + str(
+                Zmienne.nrWyslanegoBloku + 1) + "przeslany nie poprawnie. Ponawiam transmisje. "
             break
+        elif odpowiedzOdbierana == ZbioroweDane.CAN:
+            portLabel5["text"] = "Nadajnik: Polaczenie zostalo przerwane. "
+            sys.exit()
+    if Zmienne.nrBloku - 1 == len(Zmienne.blok):
+        # Po wysłaniu wszystkich bloków, wysyłanie EOT
+        portLabel6 = Label(Zmienne.window,
+                           text="Nadajnik: Zakonczono wysylanie ostatniego pakietu",
+                           font=("Arial Bold", 10))
+        portLabel6.grid(column=0, row=5)
+        portLabel7 = Label(Zmienne.window,
+                           text="",
+                           font=("Arial Bold", 10))
+        portLabel7.grid(column=0, row=6)
 
-    # Zamkniecie portu, zakonczenie transmisji
-    serialPort.close()
-    print("Nadajnik: Transfer zostal zakonczony. ")
+        while 1:
+            Zmienne.serialPort.write(ZbioroweDane.EOT)
+            Zmienne.odpowiedz = Zmienne.serialPort.read()
+            if Zmienne.odpowiedz == ZbioroweDane.ACK:
+                portLabel7["text"] = "Nadajnik: Otrzymano potwierdzenie na zakonczenie transmisji. "
+                break
+            if Zmienne.odpowiedz == ZbioroweDane.CAN:
+                portLabel7["text"] = "Nadajnik: Polaczenie zostalo przerwane. "
+                break
+
+        # Zamkniecie portu, zakonczenie transmisji
+        portLabel8 = Label(Zmienne.window,
+                           text="Nadajnik: Transfer zostal zakonczony. ",
+                           font=("Arial Bold", 10))
+        portLabel8.grid(column=0, row=7)
+    if Zmienne.nrBloku - 1 < len(Zmienne.blok):
+        Zmienne.window.after(100, tele)
 
 
-if __name__ == '__main__':
-    main()
+
+# Otwieranie pliku do wyslania i pobranie tekstu
+file = open("Wysylana.txt", 'rb')
+wiadomosc = file.read()
+
+# Podzial tekstu na 128 bajtowe sekcje
+Zmienne.blok = [wiadomosc[i:i + 128] for i in range(0, len(wiadomosc), 128)]
+file.close()
+
+Zmienne.window.title("Wysylanie")
+Zmienne.window.geometry('400x200')
+portLabel = Label(Zmienne.window,
+                  text="Nadajnik: Wybierz numer portu szeregowego:",
+                  font=("Arial Bold", 10))
+portLabel.grid(column=0, row=0)
+combo = Combobox(Zmienne.window)
+combo['values'] = ("COM1", "COM2", "COM3", "COM4", "COM5")
+combo.current(1)
+combo.grid(column=0, row=1)
+button = Button(Zmienne.window, text="Dalej", command=dalej)
+button.grid(column=0, row=5)
+
+Zmienne.window.mainloop()
