@@ -56,7 +56,7 @@ def dalej():
 # ------------------------------------------------------------- Odbieranie blokow ---------------------------------------------------------------------
 def odbieranieBloku():
     portLabel3 = Label(ZmienOdbieranie.window,
-                       text="Odbiornik: Odbieram pakiet nr." + str(ZmienOdbieranie.nrPakietu),
+                       text="Odbiornik: Odbieram pakiet nr." + str(ZmienOdbieranie.nrPakietu + 1),
                        font=("Arial Bold", 10))
     portLabel3.grid(column=0, row=2)
 

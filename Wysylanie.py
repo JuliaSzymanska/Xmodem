@@ -131,6 +131,7 @@ def wysylanieBloku():
                 break
 
         # Zamkniecie portu, zakonczenie transmisji
+        Zmienne.serialPort.close()
         portLabel8 = Label(Zmienne.window,
                            text="Nadajnik: Transfer zostal zakonczony. ",
                            font=("Arial Bold", 10))
