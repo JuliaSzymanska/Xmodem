@@ -5,6 +5,7 @@ from tkinter import *
 from tkinter.ttk import *
 import Zmienne
 
+
 def dalej():
     Zmienne.port = str(combo.get())
     button.destroy()
@@ -21,6 +22,7 @@ def dalej():
                            text="Nadajnik: Nie udało sie otworzyc portu",
                            font=("Arial Bold", 10))
         portLabel2.grid(column=0, row=1)
+        return
 
     Zmienne.odpowiedz = Zmienne.serialPort.read()
     if Zmienne.odpowiedz == ZbioroweDane.CRC or Zmienne.odpowiedz == ZbioroweDane.NAK:
@@ -38,9 +40,10 @@ def dalej():
     portLabel4.grid(column=0, row=3)
 
     if Zmienne.nrBloku - 1 < len(Zmienne.blok):
-        Zmienne.window.after(100, tele())
+        Zmienne.window.after(100, wysylanieBloku)
 
-def tele():
+
+def wysylanieBloku():
     Zmienne.serialPort.write(ZbioroweDane.SOH)
     pakiet = bytearray(Zmienne.nrBloku.to_bytes(1, 'big'))
     pakiet.append(255 - Zmienne.nrBloku)
@@ -120,8 +123,7 @@ def tele():
                            font=("Arial Bold", 10))
         portLabel8.grid(column=0, row=7)
     if Zmienne.nrBloku - 1 < len(Zmienne.blok):
-        Zmienne.window.after(100, tele)
-
+        Zmienne.window.after(100, wysylanieBloku)
 
 
 # Otwieranie pliku do wyslania i pobranie tekstu
@@ -134,15 +136,16 @@ file.close()
 
 Zmienne.window.title("Wysylanie")
 Zmienne.window.geometry('400x200')
+Zmienne.window.grid_columnconfigure(1, weight=5)
 portLabel = Label(Zmienne.window,
                   text="Nadajnik: Wybierz numer portu szeregowego:",
                   font=("Arial Bold", 10))
-portLabel.grid(column=0, row=0)
+portLabel.grid(column=1, row=0)
 combo = Combobox(Zmienne.window)
 combo['values'] = ("COM1", "COM2", "COM3", "COM4", "COM5")
 combo.current(1)
-combo.grid(column=0, row=1)
+combo.grid(column=1, row=1)
 button = Button(Zmienne.window, text="Dalej", command=dalej)
-button.grid(column=0, row=5)
+button.grid(column=1, row=5)
 
 Zmienne.window.mainloop()
