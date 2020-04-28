@@ -95,7 +95,7 @@ def wysylanieBloku():
             portLabel5["text"] = "Nadajnik: Pakiet nr." + str(Zmienne.nrWyslanegoBloku + 1) + " przeslany poprawnie. "
             Zmienne.nrWyslanegoBloku += 1
             if Zmienne.nrBloku == 255:
-                Zmienne.nrBloku = 1
+                Zmienne.nrBloku = 0
             else:
                 Zmienne.nrBloku += 1
             break
