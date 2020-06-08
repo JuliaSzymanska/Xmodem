@@ -1,9 +1,9 @@
 import crc16
 import serial
-import CollectiveData
 from tkinter import *
 from tkinter.ttk import *
 import Variables
+import CollectiveData
 
 
 # ------------------------------------------------------- Opening ports and making connections -----------------------------------------------------
