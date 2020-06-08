@@ -1,179 +1,179 @@
 import serial
-import ZbioroweDane
+import CollectiveData
 import crc16
-import ZmienOdbieranie
+import VariableReceiving
 from tkinter import *
 from tkinter.ttk import *
 
 
-# ------------------------------------------------------- Otwieranie portow i nawiazywanie polaczenia -------------------------------------------------------
-def dalej():
-    ZmienOdbieranie.port = str(combo.get())
+# ------------------------------------------------------- Opening ports and making connections -------------------------------------------------------
+def Next():
+    VariableReceiving.port = str(combo.get())
     button.destroy()
     combo.destroy()
     combo1.destroy()
     portLabel3.destroy()
     portLabel.destroy()
-    portLabelx = Label(ZmienOdbieranie.window,
-                       text="Odbiornik: Otwieranie portu: " + ZmienOdbieranie.port,
+    portLabelx = Label(VariableReceiving.window,
+                       text="Receiver: Opening the port: " + VariableReceiving.port,
                        font=("Arial Bold", 10))
     portLabelx.grid(column=0, row=0)
 
-    # Otwieranie wybranego portu
+    # Opening the selected port
     try:
-        ZmienOdbieranie.serialPort = serial.Serial(ZmienOdbieranie.port, 9600, 8, serial.PARITY_NONE,
-                                                   serial.STOPBITS_ONE, 15)
-        portLabel2 = Label(ZmienOdbieranie.window,
-                           text="Odbiornik: Port zostal otwarty. Oczekiwanie na transmisje....",
+        VariableReceiving.serial_port = serial.Serial(VariableReceiving.port, 9600, 8, serial.PARITY_NONE,
+                                                      serial.STOPBITS_ONE, 15)
+        portLabel2 = Label(VariableReceiving.window,
+                           text="Receiver: The port has been opened. Waiting for broadcasts....",
                            font=("Arial Bold", 10))
         portLabel2.grid(column=0, row=1)
     except:
-        portLabel2 = Label(ZmienOdbieranie.window,
-                           text="Odbiornik: Nie udało sie otworzyc portu",
+        portLabel2 = Label(VariableReceiving.window,
+                           text="Receiver: Failed to open port. ",
                            font=("Arial Bold", 10))
         portLabel2.grid(column=0, row=1)
         return
 
-    # Inicjowanie polaczenia, odbieranie wysłanego bloku
-    ZmienOdbieranie.serialPort.timeout = 10
+    # Initiating connection, receiving sent block
+    VariableReceiving.serial_port.timeout = 10
     for i in range(6):
-        ZmienOdbieranie.serialPort.write(ZmienOdbieranie.decyzja)
-        if ZmienOdbieranie.decyzja == ZbioroweDane.NAK:
-            ZmienOdbieranie.odebranyBlok = ZmienOdbieranie.serialPort.read(132)
-        elif ZmienOdbieranie.decyzja == ZbioroweDane.CRC:
-            ZmienOdbieranie.odebranyBlok = ZmienOdbieranie.serialPort.read(133)
-        if ZmienOdbieranie.odebranyBlok != b'':
+        VariableReceiving.serial_port.write(VariableReceiving.decision)
+        if VariableReceiving.decision == CollectiveData.NAK:
+            VariableReceiving.received_block = VariableReceiving.serial_port.read(132)
+        elif VariableReceiving.decision == CollectiveData.CRC:
+            VariableReceiving.received_block = VariableReceiving.serial_port.read(133)
+        if VariableReceiving.received_block != b'':
             break
-    if ZmienOdbieranie.odebranyBlok == b'':
-        print("Odbiornik: Brak odpowiedzi. ")
+    if VariableReceiving.received_block == b'':
+        print("Receiver: No answer. ")
         sys.exit()
 
-    # Odczytywanie odebranego bloku, odbieranie kolejnych blokow
-    if not ZmienOdbieranie.flag:
-        ZmienOdbieranie.window.after(100, odbieranieBloku)
+    # Reading a received block, receiving subsequent blocks
+    if not VariableReceiving.flag:
+        VariableReceiving.window.after(100, receivingBlocks)
 
 
-# ------------------------------------------------------------- Odbieranie blokow ---------------------------------------------------------------------
-def odbieranieBloku():
-    portLabel3 = Label(ZmienOdbieranie.window,
-                       text="Odbiornik: Odbieram pakiet nr." + str(ZmienOdbieranie.nrPakietu + 1),
+# ------------------------------------------------------------- Receiving blocks ---------------------------------------------------------------------
+def receivingBlocks():
+    portLabel3 = Label(VariableReceiving.window,
+                       text="Receiver: I receive package no." + str(VariableReceiving.package_no + 1),
                        font=("Arial Bold", 10))
     portLabel3.grid(column=0, row=2)
 
-    portLabel4 = Label(ZmienOdbieranie.window,
-                       text=str(ZmienOdbieranie.odebranyBlok),
+    portLabel4 = Label(VariableReceiving.window,
+                       text=str(VariableReceiving.received_block),
                        font=("Arial Bold", 10))
     portLabel4.grid(column=0, row=3)
 
-    # Sprawdzenie czy nie był to ostatni wyslany blok
-    if ZmienOdbieranie.odebranyBlok[0].to_bytes(1, 'big') == ZbioroweDane.EOT:
-        portLabel7 = Label(ZmienOdbieranie.window,
-                           text=str("Odbiornik: Trnasmisja zostala zakonczona. Odebrano ostatni pakiet. "),
+    # Checking if this was the last block sent
+    if VariableReceiving.received_block[0].to_bytes(1, 'big') == CollectiveData.EOT:
+        portLabel7 = Label(VariableReceiving.window,
+                           text=str("Receiver: The transmission has been completed. Last packet received. "),
                            font=("Arial Bold", 10))
         portLabel7.grid(column=0, row=5)
-        ZmienOdbieranie.serialPort.write(ZbioroweDane.ACK)
+        VariableReceiving.serial_port.write(CollectiveData.ACK)
 
-        # Zapis do pliku calego odebranego pliku
-        file = open("Odebrana.txt", 'wb+')
-        file.write(ZmienOdbieranie.calkowityBlok)
+        # Saving the entire received file to a file
+        file = open("Receive.txt", 'wb+')
+        file.write(VariableReceiving.total_block)
         file.close()
-        ZmienOdbieranie.serialPort.close()
+        VariableReceiving.serial_port.close()
         sys.exit()
 
-    # Odczytanie numeru bloku, dopelnienia numeru bloku oraz sprawdzenie czy zostaly poprawnie odczytane
-    nrBloku = int(ZmienOdbieranie.odebranyBlok[1])
-    dopelnienieNrBloku = int(ZmienOdbieranie.odebranyBlok[2])
-    if dopelnienieNrBloku + nrBloku != 255:
-        print("Odbiornik: Pakiet odebrano niepoprawnie. Niepoprawny numer pakietu. Ponawiam transmisje. ")
-        ZmienOdbieranie.serialPort.write(ZbioroweDane.NAK)
+    # Reading the block number, completing the block number and checking that they have been read correctly
+    block_no = int(VariableReceiving.received_block[1])
+    completing_the_block_number = int(VariableReceiving.received_block[2])
+    if completing_the_block_number + block_no != 255:
+        print("Receiver: The packet was received incorrectly. Invalid packet number. I repeat broadcasts. ")
+        VariableReceiving.serial_port.write(CollectiveData.NAK)
         return
 
-    # Odczytanie i obliczenie sumy kontrolnej oraz sprawdzenie rownosci sum kontrolnych
-    sumaKontrolnaWyliczona = 0
-    sumaKontrolnaOdebrana = 0
-    if ZmienOdbieranie.decyzja == ZbioroweDane.NAK:
-        sumaKontrolnaOdebrana = ZmienOdbieranie.odebranyBlok[-1]
-        for i in ZmienOdbieranie.odebranyBlok[3:-1]:
-            sumaKontrolnaWyliczona += i
-        sumaKontrolnaWyliczona %= 256
-    if ZmienOdbieranie.decyzja == ZbioroweDane.CRC:
-        sumaKontrolnaOdebrana = ZmienOdbieranie.odebranyBlok[-1] + ZmienOdbieranie.odebranyBlok[-2] * 256
-        sumaKontrolnaWyliczona = crc16.crc16xmodem(ZmienOdbieranie.odebranyBlok[3:-2])
-    if sumaKontrolnaOdebrana != sumaKontrolnaWyliczona:
-        print("Odbiornik: Pakiet odebrano niepoprawnie. Niepoprawna suma kontrolna. Ponawiam transmisje. ")
-        ZmienOdbieranie.serialPort.write(ZbioroweDane.NAK)
+    # Reading and calculating the checksum and checking the equality of checksums
+    checksum_calculated = 0
+    checksum_received = 0
+    if VariableReceiving.decision == CollectiveData.NAK:
+        checksum_received = VariableReceiving.received_block[-1]
+        for i in VariableReceiving.received_block[3:-1]:
+            checksum_calculated += i
+        checksum_calculated %= 256
+    if VariableReceiving.decision == CollectiveData.CRC:
+        checksum_received = VariableReceiving.received_block[-1] + VariableReceiving.received_block[-2] * 256
+        checksum_calculated = crc16.crc16xmodem(VariableReceiving.received_block[3:-2])
+    if checksum_received != checksum_calculated:
+        print("Receiver: The packet was received incorrectly. Invalid checksum. I repeat broadcasts. ")
+        VariableReceiving.serial_port.write(CollectiveData.NAK)
         return
 
-    portLabel6 = Label(ZmienOdbieranie.window,
-                       text="Odbiornik: Pakiet został odebrany poprawnie. " + str(
-                           ZmienOdbieranie.nrPakietu + 1) + " odebrano poprawnie. ",
+    portLabel6 = Label(VariableReceiving.window,
+                       text="Receiver: The packet was received correctly. " + str(
+                           VariableReceiving.package_no + 1) + " received correctly. ",
                        font=("Arial Bold", 10))
     portLabel6.grid(column=0, row=4)
-    ZmienOdbieranie.nrPakietu += 1
+    VariableReceiving.package_no += 1
 
-    # Usuniecie dopelnienia przy zapisywaniu odebranego pakietu
-    dopelnienie = bytearray(ZmienOdbieranie.odebranyBlok)
-    for i in range(len(dopelnienie)):
-        if dopelnienie[i] == 26:
-            if ZmienOdbieranie.decyzja == ZbioroweDane.NAK:
-                del dopelnienie[i:-1]
-                ZmienOdbieranie.odebranyBlok = bytes(dopelnienie)
+    # Delete padding when saving a received package
+    complement = bytearray(VariableReceiving.received_block)
+    for i in range(len(complement)):
+        if complement[i] == 26:
+            if VariableReceiving.decision == CollectiveData.NAK:
+                del complement[i:-1]
+                VariableReceiving.received_block = bytes(complement)
                 break
-            if ZmienOdbieranie.decyzja == ZbioroweDane.CRC:
-                del dopelnienie[i:-2]
-                ZmienOdbieranie.odebranyBlok = bytes(dopelnienie)
+            if VariableReceiving.decision == CollectiveData.CRC:
+                del complement[i:-2]
+                VariableReceiving.received_block = bytes(complement)
                 break
 
-    # Dodanie odebranego bloku z usunietym dopelnieniem do pozostalych odebranych blokow
-    if ZmienOdbieranie.decyzja == ZbioroweDane.NAK:
-        ZmienOdbieranie.calkowityBlok += ZmienOdbieranie.odebranyBlok[3:-1]
-    elif ZmienOdbieranie.decyzja == ZbioroweDane.CRC:
-        ZmienOdbieranie.calkowityBlok += ZmienOdbieranie.odebranyBlok[3:-2]
-    ZmienOdbieranie.serialPort.write(ZbioroweDane.ACK)
+    # Add a received block with padding removed to other received blocks
+    if VariableReceiving.decision == CollectiveData.NAK:
+        VariableReceiving.total_block += VariableReceiving.received_block[3:-1]
+    elif VariableReceiving.decision == CollectiveData.CRC:
+        VariableReceiving.total_block += VariableReceiving.received_block[3:-2]
+    VariableReceiving.serial_port.write(CollectiveData.ACK)
 
-    # Odczytanie kolejnego bloku
-    if ZmienOdbieranie.decyzja == ZbioroweDane.NAK:
-        ZmienOdbieranie.odebranyBlok = ZmienOdbieranie.serialPort.read(132)
-    elif ZmienOdbieranie.decyzja == ZbioroweDane.CRC:
-        ZmienOdbieranie.odebranyBlok = ZmienOdbieranie.serialPort.read(133)
-    if not ZmienOdbieranie.flag:
-        ZmienOdbieranie.window.after(100, odbieranieBloku)
+    # Reading the next block
+    if VariableReceiving.decision == CollectiveData.NAK:
+        VariableReceiving.received_block = VariableReceiving.serial_port.read(132)
+    elif VariableReceiving.decision == CollectiveData.CRC:
+        VariableReceiving.received_block = VariableReceiving.serial_port.read(133)
+    if not VariableReceiving.flag:
+        VariableReceiving.window.after(100, receivingBlocks)
 
 
-# ---------------------------------------------------------------- Poczatek programu -----------------------------------------------------------------
-# Pobieranie numeru portu do otwarcia
-ZmienOdbieranie.window.title("Odbieranie")
-ZmienOdbieranie.window.geometry('1000x200')
-ZmienOdbieranie.window.grid_columnconfigure(1, weight=5)
-portLabel = Label(ZmienOdbieranie
+# ---------------------------------------------------------------- Beginning of the program -----------------------------------------------------------------
+# Getting the port number to open
+VariableReceiving.window.title("Receiving")
+VariableReceiving.window.geometry('1000x200')
+VariableReceiving.window.grid_columnconfigure(1, weight=5)
+portLabel = Label(VariableReceiving
                   .window,
-                  text="Nadajnik: Wybierz numer portu szeregowego:",
+                  text="Receiver: Select the serial port number:",
                   font=("Arial Bold", 10))
 portLabel.grid(column=1, row=0)
-combo = Combobox(ZmienOdbieranie
+combo = Combobox(VariableReceiving
                  .window)
 combo['values'] = ("COM1", "COM2", "COM3", "COM4", "COM5")
 combo.current(1)
 combo.grid(column=1, row=1)
 
-# Pytanie czy jest zgoda na transmisje
-portLabel3 = Label(ZmienOdbieranie.window,
-                   text="Odbiornik: Zgoda na transmisje?",
+# The question is whether there is consent to broadcasts
+portLabel3 = Label(VariableReceiving.window,
+                   text="Receiver: Consent to broadcasts?",
                    font=("Arial Bold", 10))
 portLabel3.grid(column=1, row=2)
-combo1 = Combobox(ZmienOdbieranie
+combo1 = Combobox(VariableReceiving
                   .window)
-combo1['values'] = ("Tak - Algebraiczna", "Tak - CRC", "Nie")
+combo1['values'] = ("Yes - Algebraic", "Yes - CRC", "No")
 combo1.current(0)
 combo1.grid(column=1, row=3)
-zgoda = combo1.get()
-if zgoda == "Tak - Algebraiczna":
-    ZmienOdbieranie.decyzja = ZbioroweDane.NAK
-elif zgoda == "Tak - CRC":
-    ZmienOdbieranie.decyzja = ZbioroweDane.CRC
-elif zgoda == "Nie":
+agreement = combo1.get()
+if agreement == "Yes - Algebraic":
+    VariableReceiving.decision = CollectiveData.NAK
+elif agreement == "Yes - CRC":
+    VariableReceiving.decision = CollectiveData.CRC
+elif agreement == "No":
     sys.exit()
-button = Button(ZmienOdbieranie
-                .window, text="Dalej", command=dalej)
+button = Button(VariableReceiving
+                .window, text="Next", command=Next)
 button.grid(column=1, row=5)
-ZmienOdbieranie.window.mainloop()
+VariableReceiving.window.mainloop()
