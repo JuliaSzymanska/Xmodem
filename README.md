@@ -31,10 +31,16 @@ pip install pyserial crc16
 
 #### GUI
 * Transmitter:
-![Transmitter_GUI.png](https://github.com/JuliaSzymanska/Xmodem/blob/master/.readme/Transmitter_GUI.png)
+
+<p align="center">
+  <img src="https://github.com/JuliaSzymanska/Xmodem/blob/master/.readme/Transmitter_GUI.png">
+</p>
 
 * Receiver:
-![Receiver_GUI.png](https://github.com/JuliaSzymanska/Xmodem/blob/master/.readme/Receiver_GUI.png)
+
+<p align="center">
+  <img src="https://github.com/JuliaSzymanska/Xmodem/blob/master/.readme/Receiver_GUI.png">
+</p>
 
 ## License
 [Apache License 2.0](https://github.com/JuliaSzymanska/Sound)
